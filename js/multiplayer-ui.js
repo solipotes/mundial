@@ -93,6 +93,10 @@ function bindMultiplayerMenuEvents() {
 async function handleJoinByPin() {
   const pin = document.getElementById('mp-pin-input')?.value?.trim().toUpperCase();
   if (!pin || pin.length < 6) { showToast('Introduce un código válido', 'error'); return; }
+  await joinAndOpenLobby(pin);
+}
+
+export async function joinAndOpenLobby(pin) {
   showLoading('Uniéndose a la sala...');
   try {
     await joinMultiplayerTournament({
@@ -244,12 +248,12 @@ function renderLobbyPlayers(data) {
     card.className = `lobby-player-card${p.ready ? ' is-ready' : ''}${isMe ? ' is-me' : ''}`;
 
     const avatarHtml = p.photoURL
-      ? `<img class="lobby-player-avatar" src="${p.photoURL}" alt="${p.displayName}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
-      : `<div class="lobby-player-avatar-fallback">${p.displayName?.[0] || '?'}</div>`;
+      ? `<img class="lobby-player-avatar" src="${p.photoURL}" alt="${p.displayName || 'Seleccionador'}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+      : `<div class="lobby-player-avatar-fallback">${(p.displayName || 'S')[0].toUpperCase()}</div>`;
 
     card.innerHTML = `
       ${avatarHtml}
-      <div class="lobby-player-name">${p.displayName}${isMe ? ' (Tú)' : ''}</div>
+      <div class="lobby-player-name">${p.displayName || 'Seleccionador'}${isMe ? ' (Tú)' : ''}</div>
       ${country ? `<div class="lobby-player-flag">${country.flag}</div>
       <div class="lobby-player-country">${country.name}</div>` : '<div class="lobby-player-country" style="color:var(--text-muted)">Sin selección</div>'}
       <div class="lobby-player-status">${p.ready ? '✅' : '⏳'}</div>
@@ -407,6 +411,7 @@ async function confirmCountrySelection(country, overlay) {
     hideLoading();
     showToast(`${country.flag} ${country.name} reservada!`, 'success');
   } catch (e) {
+    console.error("Error in selectCountryForMultiplayer:", e);
     hideLoading();
     if (e.message === 'COUNTRY_TAKEN') {
       showToast('Ese país ya está elegido, escoge otro', 'error');

@@ -23,6 +23,7 @@ import { simulateRound, applyMatchResult, simulateMatch, generateNarrative } fro
 import {
   initMultiplayerUI,
   openLobby,
+  joinAndOpenLobby,
   checkUrlForJoinPin,
   getMpCurrentPin,
   renderMpNextRoundBanner,
@@ -44,6 +45,7 @@ import {
   loadCustomTeamLocally, saveCustomTeamLocally,
   saveLocalTournamentHistory, loadLocalTournamentHistory
 } from './db.js';
+import { checkIsAdmin, initAdminDashboard } from './admin.js';
 
 // ─── App State ────────────────────────────────────────────
 let appState = {
@@ -57,6 +59,7 @@ let appState = {
   mpPin:          null,    // current multiplayer room PIN
   mpUnsubscribe:  null,    // Firestore onSnapshot cleanup fn
   mpMyCountryId:  null,    // this player's country in the MP tournament
+  isAdmin:        false,   // true if user is admin
 };
 
 // Helper to get active countries
@@ -219,6 +222,7 @@ async function handleAuthChange(user) {
   }
 
   appState.user = getUserProfile(user) || user;
+  saveLocalUserProfile(appState.user);
 
   // Update avatar
   const avatarImg = document.getElementById('user-avatar');
@@ -229,6 +233,16 @@ async function handleAuthChange(user) {
 
   // Initialize multiplayer UI module
   initMultiplayerUI(appState.user);
+
+  // Check Admin Status
+  appState.isAdmin = await checkIsAdmin(appState.user.uid);
+  if (appState.isAdmin) {
+    document.getElementById('nav-admin')?.classList.remove('hidden');
+    document.getElementById('mobile-nav-admin')?.classList.remove('hidden');
+  } else {
+    document.getElementById('nav-admin')?.classList.add('hidden');
+    document.getElementById('mobile-nav-admin')?.classList.add('hidden');
+  }
 
   // Load saved state
   const savedTeam        = await loadLocalMyTeam();
@@ -245,8 +259,7 @@ async function handleAuthChange(user) {
     const pin = window._pendingJoinPin;
     window._pendingJoinPin = null;
     hideLoading();
-    showView('multiplayer-lobby');
-    openLobby(pin);
+    joinAndOpenLobby(pin);
     return;
   }
 
@@ -594,6 +607,7 @@ function bindNavEvents() {
         case 'myteam':    refreshMyTeam();    break;
         case 'stats':     refreshStats();     break;
         case 'halloffame': renderHallOfFame(); break;
+        case 'admin':     if(appState.isAdmin) initAdminDashboard(appState.user.uid); break;
       }
     });
   });

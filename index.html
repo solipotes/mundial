@@ -209,6 +209,9 @@
         <button class="nav-btn" data-view="halloffame" id="nav-halloffame">
           <span class="nav-icon">🏆</span><span class="nav-label">Historial</span>
         </button>
+        <button class="nav-btn hidden" data-view="admin" id="nav-admin">
+          <span class="nav-icon">⚙️</span><span class="nav-label">Admin</span>
+        </button>
       </nav>
       <div class="header-right">
         <div id="user-avatar-container" class="user-avatar-container">
@@ -233,7 +236,12 @@
         <span>👕</span><span>Equipo</span>
       </button>
       <button class="mobile-nav-btn" data-view="halloffame">
-        <span>🏆</span><span>Historial</span>
+        <div class="mobile-icon">🏆</div>
+        <div class="mobile-label">Historial</div>
+      </button>
+      <button class="mobile-nav-btn hidden" data-view="admin" id="mobile-nav-admin">
+        <div class="mobile-icon">⚙️</div>
+        <div class="mobile-label">Admin</div>
       </button>
     </nav>
 
@@ -551,6 +559,50 @@
       </div>
     </div>
   </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!--  VIEW: ADMIN DASHBOARD                     -->
+  <!-- ══════════════════════════════════════════ -->
+  <main id="view-admin" class="app-view hidden" style="padding:20px; max-width:800px; margin:0 auto;">
+    <h2 style="font-size:2rem; margin-bottom:20px;">⚙️ Panel de Administración</h2>
+
+    <!-- Metrics -->
+    <div style="display:flex; gap:15px; margin-bottom:30px; flex-wrap:wrap;">
+      <div style="flex:1; background:var(--card-bg); padding:20px; border-radius:12px; border:1px solid var(--border); text-align:center;">
+        <div style="color:var(--text-muted); font-size:0.9rem; margin-bottom:5px;">Usuarios Registrados</div>
+        <div id="admin-metric-users" style="font-size:2rem; font-weight:bold; color:var(--primary);">0</div>
+      </div>
+      <div style="flex:1; background:var(--card-bg); padding:20px; border-radius:12px; border:1px solid var(--border); text-align:center;">
+        <div style="color:var(--text-muted); font-size:0.9rem; margin-bottom:5px;">Torneos Jugados</div>
+        <div id="admin-metric-tournaments" style="font-size:2rem; font-weight:bold; color:var(--primary);">0</div>
+      </div>
+      <div style="flex:1; background:var(--card-bg); padding:20px; border-radius:12px; border:1px solid var(--border); text-align:center;">
+        <div style="color:var(--text-muted); font-size:0.9rem; margin-bottom:5px;">Salas Multijugador</div>
+        <div id="admin-metric-mp" style="font-size:2rem; font-weight:bold; color:var(--primary);">0</div>
+      </div>
+    </div>
+
+    <!-- Users Table -->
+    <div style="background:var(--card-bg); border-radius:12px; border:1px solid var(--border); overflow:hidden;">
+      <h3 style="padding:15px 20px; margin:0; border-bottom:1px solid var(--border); font-size:1.1rem; background:rgba(0,0,0,0.2);">Gestión de Usuarios</h3>
+      <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; text-align:left;">
+          <thead>
+            <tr style="background:rgba(0,0,0,0.1);">
+              <th style="padding:12px; color:var(--text-muted); font-size:0.85rem; font-weight:normal;">Usuario</th>
+              <th style="padding:12px; color:var(--text-muted); font-size:0.85rem; font-weight:normal;">Email</th>
+              <th style="padding:12px; color:var(--text-muted); font-size:0.85rem; font-weight:normal;">Torneos</th>
+              <th style="padding:12px; color:var(--text-muted); font-size:0.85rem; font-weight:normal;">Rol</th>
+              <th style="padding:12px; color:var(--text-muted); font-size:0.85rem; font-weight:normal; text-align:right;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="admin-users-tbody">
+            <!-- Rendered by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
 
   <!-- ══════════════════════════════════════════ -->
   <!--  VIEW: MULTIPLAYER LOBBY                   -->
