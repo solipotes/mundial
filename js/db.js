@@ -181,7 +181,8 @@ export async function loadLocalMyTeam() {
 export function saveCustomTeamLocally(team) {
   const raw = localStorage.getItem(LOCAL_KEY_CUSTOM_TEAMS);
   const dict = raw ? JSON.parse(raw) : {};
-  dict[team.id] = team;
+  const tType = team.tournamentType || '2026';
+  dict[`${tType}_${team.id}`] = team;
   localStorage.setItem(LOCAL_KEY_CUSTOM_TEAMS, JSON.stringify(dict));
 }
 
@@ -208,6 +209,9 @@ export function loadLocalUserProfile() {
 
 // -- History --
 export function saveLocalTournamentHistory(tournament) {
+  if (!tournament.completedAt) {
+    tournament.completedAt = Date.now();
+  }
   const raw = localStorage.getItem(LOCAL_KEY_HISTORY);
   const history = raw ? JSON.parse(raw) : [];
   const existingIndex = history.findIndex(t => t.id === tournament.id);

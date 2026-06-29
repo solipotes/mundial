@@ -181,12 +181,17 @@ async function handleAuthChange(user) {
 
   // Load saved state
   const savedTeam       = await loadLocalMyTeam();
-  const savedTournament = await loadLocalTournament();
+  const activeTournament = await loadLocalTournament();
+  if (activeTournament) {
+    appState.tournament = activeTournament;
+    let loadedType = activeTournament.tournamentType || '2026';
+    if (loadedType === 'wc2026') loadedType = '2026';
+    appState.tournamentType = loadedType;
+  }
 
-  if (savedTournament && savedTournament.myTeamId) {
+  if (appState.tournament && appState.tournament.myTeamId) {
     // Resume tournament
     appState.myTeam     = savedTeam;
-    appState.tournament = savedTournament;
     hideLoading();
     showHomeView(true);
   } else if (savedTeam && savedTeam.id) {
@@ -285,8 +290,9 @@ function showSetupView() {
 
 // ─── Country Selected ─────────────────────────────────────
 function handleCountrySelected(country) {
-  // First try to load globally saved custom team
-  const customTeam = loadCustomTeamLocally(country.id);
+  // First try to load globally saved custom team using tournament-specific key
+  const customKey = `${appState.tournamentType}_${country.id}`;
+  const customTeam = loadCustomTeamLocally(customKey);
   
   const existingTeam = appState.myTeam?.id === country.id
     ? appState.myTeam
@@ -300,6 +306,7 @@ function handleCountrySelected(country) {
   
   appState.myTeam = {
     ...country,
+    tournamentType: appState.tournamentType,
     players: initialPlayers,
     kitHome: existingTeam?.kitHome || { ...country.kitHome },
     kitAway: existingTeam?.kitAway || { ...country.kitAway },
@@ -494,6 +501,8 @@ function startTournament() {
     state.teamRatings[appState.myTeam.id].players  = appState.myTeam.players;
     state.teamRatings[appState.myTeam.id].kitHome  = appState.myTeam.kitHome;
     state.teamRatings[appState.myTeam.id].kitAway  = appState.myTeam.kitAway;
+
+    state.tournamentType = appState.tournamentType;
 
     appState.tournament = state;
     saveLocalTournament(state);
@@ -1322,11 +1331,17 @@ async function renderHallOfFame() {
 
       // Format Date
       let dateStr = 'Fecha desconocida';
-      if (tourn.id && tourn.id.startsWith('tourn_')) {
-        const ts = parseInt(tourn.id.split('_')[1]);
-        if (!isNaN(ts)) {
-          const d = new Date(ts);
-          dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      if (tourn.completedAt) {
+        const d = new Date(tourn.completedAt);
+        dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      } else if (tourn.id) {
+        const parts = tourn.id.split('_');
+        if (parts.length > 1) {
+          const ts = parseInt(parts[1]);
+          if (!isNaN(ts)) {
+            const d = new Date(ts);
+            dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          }
         }
       }
 
