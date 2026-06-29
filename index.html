@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Simulador del Mundial de Fútbol — Crea tu selección, personaliza tu equipo y compite contra el mundo en un torneo generado con IA." />
+  <title>⚽ Mundial Simulator 2026</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet" />
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/auth.css" />
+  <link rel="stylesheet" href="css/dashboard.css" />
+  <link rel="stylesheet" href="css/bracket.css" />
+  <link rel="stylesheet" href="css/match.css" />
+  <link rel="stylesheet" href="css/team.css" />
+
+  <!-- JavaScript -->
+  <script type="module" src="js/app.js?v=3"></script>
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!--  PARTICLES BACKGROUND                      -->
+  <!-- ══════════════════════════════════════════ -->
+  <div id="particles-bg" aria-hidden="true"></div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!--  TOAST NOTIFICATIONS                       -->
+  <!-- ══════════════════════════════════════════ -->
+  <div id="toast-container" role="alert" aria-live="polite"></div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!--  LOADING OVERLAY                           -->
+  <!-- ══════════════════════════════════════════ -->
+  <div id="loading-overlay" class="loading-overlay active">
+    <div class="loader-ball"></div>
+    <p class="loader-text">Cargando Mundial...</p>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!--  VIEW: AUTH (Login)                        -->
+  <!-- ══════════════════════════════════════════ -->
+  <div id="view-auth" class="view hidden">
+    <div class="auth-container">
+      <div class="auth-logo">
+        <div class="trophy-icon">🏆</div>
+        <h1 class="auth-title">MUNDIAL<br/><span class="highlight">SIMULATOR</span></h1>
+        <p class="auth-subtitle">2026 Edition</p>
+      </div>
+      <div class="auth-card">
+        <p class="auth-desc">Crea tu selección, convoca a tus jugadores y compite por la gloria mundial</p>
+        <button id="btn-google-login" class="btn-google">
+          <svg viewBox="0 0 24 24" width="20" height="20">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+          </svg>
+          Continuar con Google
+        </button>
+        <p class="auth-note">Al entrar, aceptas que solo vives para el fútbol ⚽</p>
+      </div>
+      <div class="auth-features">
+        <div class="feature-item"><span>🌍</span><span>32 Selecciones</span></div>
+        <div class="feature-item"><span>⚽</span><span>Motor de Simulación</span></div>
+        <div class="feature-item"><span>📊</span><span>Stats en Tiempo Real</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!--  VIEW: SETUP (Elección de selección)        -->
+  <!-- ══════════════════════════════════════════ -->
+  <div id="view-setup" class="view hidden">
+    <div class="setup-container">
+      <div class="setup-header">
+        <h1 class="page-title">ELIGE TU <span class="highlight">SELECCIÓN</span></h1>
+        <p class="page-subtitle">Serás el seleccionador. Tu equipo, tus reglas.</p>
+      </div>
+
+      <div class="setup-search">
+        <input type="text" id="country-search" placeholder="Buscar país..." class="search-input" />
+      </div>
+
+      <div id="country-grid" class="country-grid">
+        <!-- Populated by JS -->
+      </div>
+
+      <div id="setup-team-editor" class="team-editor hidden">
+        <div class="editor-header">
+          <div id="selected-country-info" class="country-info"></div>
+          <button id="btn-confirm-selection" class="btn-primary btn-glow">
+            ¡Empezar Torneo! 🏆
+          </button>
+        </div>
+
+        <!-- Kit Builder -->
+        <div class="editor-section kit-builder">
+          <h3 class="section-title">🎽 Equipación</h3>
+          <div class="kit-tabs">
+            <button class="kit-tab active" data-kit="home">Local</button>
+            <button class="kit-tab" data-kit="away">Visitante</button>
+          </div>
+          <div class="kit-preview-area">
+            <div id="kit-preview" class="kit-preview"></div>
+            <div class="kit-colors">
+              <div class="color-picker-row">
+                <label>Camiseta</label>
+                <input type="color" id="kit-shirt-color" class="color-picker" />
+              </div>
+              <div class="color-picker-row">
+                <label>Pantalón</label>
+                <input type="color" id="kit-shorts-color" class="color-picker" />
+              </div>
+              <div class="color-picker-row">
+                <label>Medias</label>
+                <input type="color" id="kit-socks-color" class="color-picker" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Squad Builder -->
+        <div class="editor-section squad-builder">
+          <h3 class="section-title">👥 Convocatoria (23 jugadores)</h3>
+          <div class="squad-tabs">
+            <button class="squad-tab active" data-pos="ALL">Todos</button>
+            <button class="squad-tab" data-pos="GK">Porteros</button>
+            <button class="squad-tab" data-pos="DEF">Defensas</button>
+            <button class="squad-tab" data-pos="MID">Centros</button>
+            <button class="squad-tab" data-pos="FWD">Delanteros</button>
+          </div>
+          <div id="squad-list" class="squad-list"></div>
+          <button id="btn-add-player" class="btn-secondary">+ Añadir Jugador</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Player Editor Modal -->
+    <div id="modal-player" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="modal-player-title">Editar Jugador</h3>
+          <button class="modal-close" id="btn-close-player-modal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Nombre</label>
+            <input type="text" id="player-name-input" class="form-input" placeholder="Nombre del jugador" />
+          </div>
+          <div class="form-group">
+            <label>Posición</label>
+            <select id="player-position-input" class="form-select">
+              <option value="GK">Portero</option>
+              <option value="DEF">Defensa</option>
+              <option value="MID">Centrocampista</option>
+              <option value="FWD">Delantero</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Dorsal</label>
+            <input type="number" id="player-number-input" class="form-input" min="1" max="99" />
+          </div>
+          <div class="form-group">
+            <label>Valoración (<span id="rating-display">75</span>)</label>
+            <input type="range" id="player-rating-input" class="form-range" min="50" max="99" value="75" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="btn-delete-player" class="btn-danger">Eliminar</button>
+          <button id="btn-save-player" class="btn-primary">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!--  MAIN APP SHELL (after tournament starts)  -->
+  <!-- ══════════════════════════════════════════ -->
+  <div id="app-shell" class="hidden">
+    <!-- Top Navigation -->
+    <header id="app-header" class="app-header">
+      <div class="header-left">
+        <div class="header-logo">🏆 <span>MUNDIAL</span></div>
+      </div>
+      <nav class="header-nav">
+        <button class="nav-btn active" data-view="home" id="nav-home">
+          <span class="nav-icon">🏠</span><span class="nav-label">Inicio</span>
+        </button>
+        <button class="nav-btn" data-view="dashboard" id="nav-dashboard">
+          <span class="nav-icon">⚽</span><span class="nav-label">Torneo</span>
+        </button>
+        <button class="nav-btn" data-view="bracket" id="nav-bracket">
+          <span class="nav-icon">🔢</span><span class="nav-label">Cuadro</span>
+        </button>
+        <button class="nav-btn" data-view="myteam" id="nav-myteam">
+          <span class="nav-icon">👕</span><span class="nav-label">Mi Equipo</span>
+        </button>
+        <button class="nav-btn" data-view="stats" id="nav-stats">
+          <span class="nav-icon">📊</span><span class="nav-label">Estadísticas</span>
+        </button>
+        <button class="nav-btn" data-view="halloffame" id="nav-halloffame">
+          <span class="nav-icon">🏆</span><span class="nav-label">Historial</span>
+        </button>
+      </nav>
+      <div class="header-right">
+        <div id="user-avatar-container" class="user-avatar-container">
+          <img id="user-avatar" src="" alt="Avatar" class="user-avatar" />
+          <button id="btn-logout" class="btn-icon-sm" title="Cerrar sesión">⏏</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Mobile Bottom Nav -->
+    <nav id="mobile-nav" class="mobile-nav">
+      <button class="mobile-nav-btn active" data-view="home">
+        <span>🏠</span><span>Inicio</span>
+      </button>
+      <button class="mobile-nav-btn" data-view="dashboard">
+        <span>⚽</span><span>Torneo</span>
+      </button>
+      <button class="mobile-nav-btn" data-view="bracket">
+        <span>🔢</span><span>Cuadro</span>
+      </button>
+      <button class="mobile-nav-btn" data-view="myteam">
+        <span>👕</span><span>Equipo</span>
+      </button>
+      <button class="mobile-nav-btn" data-view="halloffame">
+        <span>🏆</span><span>Historial</span>
+      </button>
+    </nav>
+
+    <!-- ════════════════════════════════════ -->
+    <!--  VIEW: HOME                          -->
+    <!-- ════════════════════════════════════ -->
+    <main id="view-home" class="app-view active">
+      <div class="view-header" style="text-align:center; padding: 40px 20px;">
+        <h1 class="page-title" style="font-size: 3rem; margin-bottom: 20px;">BIENVENIDO A <span class="highlight">MUNDIAL</span></h1>
+        <p style="color:var(--text-secondary); margin-bottom: 40px; font-size: 1.2rem;">Gestiona tu equipo, simula partidos y llévalos a la gloria.</p>
+        
+        <div style="display:flex; flex-direction:column; gap:20px; align-items:center;">
+          <button id="btn-home-new-2026" class="btn-primary btn-glow btn-large" style="width:100%; max-width:400px; font-size:1.2rem;">
+            ⚽ Empezar Nuevo Mundial 2026
+          </button>
+          
+          <button id="btn-home-new-historic" class="btn-primary btn-glow btn-large" style="width:100%; max-width:400px; font-size:1.2rem; background: linear-gradient(135deg, #FF6B00, #FF0000);">
+            ⚽ Empezar Nuevo Mundial Histórico
+          </button>
+          
+          <button id="btn-home-continue" class="btn-secondary btn-large hidden" style="width:100%; max-width:400px; font-size:1.2rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);">
+            ▶️ Continuar Torneo Actual
+          </button>
+          
+          <button id="btn-home-halloffame" class="btn-secondary btn-large" style="width:100%; max-width:400px; font-size:1.2rem; background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); color: var(--gold);">
+            🏆 Ver Salón de la Fama
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- ════════════════════════════════════ -->
+    <!--  VIEW: DASHBOARD                     -->
+    <!-- ════════════════════════════════════ -->
+    <main id="view-dashboard" class="app-view hidden">
+      <!-- Round Header -->
+      <div class="round-header">
+        
+        <div class="round-badge" id="current-round-badge">Grupos - Jornada 1</div>
+        <h2 class="round-title" id="current-round-title">RONDA <span id="round-number">1</span></h2>
+        <div class="tournament-progress">
+          <div class="progress-steps" id="progress-steps">
+            <!-- Populated dynamically by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- My Team Status -->
+      <div id="my-team-status" class="my-team-status-card">
+        <div class="status-flag" id="status-flag">🏳</div>
+        <div class="status-info">
+          <div class="status-team" id="status-team-name">Tu Selección</div>
+          <div class="status-record" id="status-record">—</div>
+        </div>
+        <div class="status-next" id="status-next-match">
+          <span class="next-vs">vs</span>
+          <span id="status-opponent">—</span>
+        </div>
+      </div>
+
+      <!-- Current Round Matches -->
+      <section class="matches-section">
+        <h3 class="section-title">Partidos de esta Ronda</h3>
+        <div id="matches-grid" class="matches-grid">
+          <!-- Populated by JS -->
+        </div>
+      </section>
+
+      <!-- Simulate Button -->
+      <div class="simulate-section" id="simulate-section">
+        <button id="btn-simulate-round" class="btn-simulate">
+          <span class="simulate-icon">⚡</span>
+          <span class="simulate-text">SIMULAR RONDA</span>
+          <span class="simulate-sub">Todos los partidos a la vez</span>
+        </button>
+      </div>
+
+
+
+      <!-- Round Results (shown after simulation) -->
+      <div id="round-results" class="round-results hidden">
+        <h3 class="section-title">📋 Resultados</h3>
+        <div id="results-grid" class="results-grid"></div>
+        <div id="eliminated-section" class="eliminated-section">
+          <h4>❌ Eliminados</h4>
+          <div id="eliminated-grid" class="eliminated-grid"></div>
+        </div>
+        <button id="btn-next-round" class="btn-primary btn-glow btn-large">
+          Siguiente Ronda →
+        </button>
+      </div>
+
+      <!-- Champions Screen -->
+      <div id="champions-screen" class="champions-screen hidden">
+        <div class="champions-confetti" id="confetti-container"></div>
+        <div class="trophy-animation">🏆</div>
+        <h1 class="champions-title">¡CAMPEÓN DEL MUNDO!</h1>
+        <div class="champion-country" id="champion-country"></div>
+        <div class="champion-stats" id="champion-stats"></div>
+        <button id="btn-new-tournament" class="btn-primary btn-glow btn-large">
+          🔄 Nuevo Torneo
+        </button>
+      </div>
+    </main>
+
+    <!-- ════════════════════════════════════ -->
+    <!--  VIEW: BRACKET                       -->
+    <!-- ════════════════════════════════════ -->
+    <main id="view-bracket" class="app-view hidden">
+      <div class="view-header">
+        <h2 class="page-title">CUADRO DEL <span class="highlight">TORNEO</span></h2>
+      </div>
+      <div class="bracket-wrapper">
+        <div id="bracket-container" class="bracket-container">
+          <!-- SVG bracket generated by JS -->
+        </div>
+      </div>
+    </main>
+
+    <!-- ════════════════════════════════════ -->
+    <!--  VIEW: MY TEAM                       -->
+    <!-- ════════════════════════════════════ -->
+    <main id="view-myteam" class="app-view hidden">
+      <div class="view-header">
+        <h2 class="page-title">MI <span class="highlight">SELECCIÓN</span></h2>
+      </div>
+
+      <div class="myteam-grid">
+        <!-- Formation Display -->
+        <div class="formation-card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3 class="section-title" style="margin-bottom:0;">🟢 Alineación</h3>
+            <div style="display:flex; gap:10px;">
+              <select id="formation-select" class="form-select" style="background:#111; color:#fff; border:1px solid #333; padding:5px 10px; border-radius:4px; font-family:var(--font-mono);">
+                <option value="4-3-3">4-3-3</option>
+                <option value="4-4-2">4-4-2</option>
+                <option value="3-5-2">3-5-2</option>
+                <option value="5-3-2">5-3-2</option>
+              </select>
+              <button id="btn-auto-select" class="btn-primary" style="padding:5px 10px; font-size:0.8rem; border-radius:4px;">✨ Auto</button>
+            </div>
+          </div>
+          <div id="formation-display" class="formation-display">
+            <!-- Football pitch with players -->
+          </div>
+        </div>
+
+        <!-- Kit Preview -->
+        <div class="kit-card">
+          <h3 class="section-title">🎽 Equipación</h3>
+          <div class="kit-tabs-mini">
+            <button class="kit-tab-mini active" data-kit="home">Local</button>
+            <button class="kit-tab-mini" data-kit="away">Visitante</button>
+          </div>
+          <div id="myteam-kit-preview" class="kit-preview-large"></div>
+
+          <!-- Edit Kit -->
+          <div class="kit-edit-section">
+            <div class="color-picker-row">
+              <label>Camiseta</label>
+              <input type="color" id="myteam-kit-shirt" class="color-picker" />
+            </div>
+            <div class="color-picker-row">
+              <label>Pantalón</label>
+              <input type="color" id="myteam-kit-shorts" class="color-picker" />
+            </div>
+            <div class="color-picker-row">
+              <label>Medias</label>
+              <input type="color" id="myteam-kit-socks" class="color-picker" />
+            </div>
+            <button id="btn-save-kit" class="btn-secondary btn-sm">Guardar Kit</button>
+          </div>
+        </div>
+
+        <!-- Coach Info -->
+        <div class="coach-card">
+          <h3 class="section-title">🧑‍💼 Seleccionador</h3>
+          <div class="coach-display" id="coach-display"></div>
+        </div>
+
+        <!-- Player Stats -->
+        <div class="player-stats-card">
+          <h3 class="section-title">📈 Mis Jugadores</h3>
+          <div id="my-players-list" class="my-players-list"></div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ════════════════════════════════════ -->
+    <!--  VIEW: HALL OF FAME                  -->
+    <!-- ════════════════════════════════════ -->
+    <main id="view-halloffame" class="app-view hidden">
+      <div class="view-header">
+        <h2 class="page-title">SALÓN DE LA <span class="highlight">FAMA</span></h2>
+        <p class="page-subtitle">Historial de tus mundiales disputados</p>
+      </div>
+
+      <div id="halloffame-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;padding:20px;">
+        <!-- Populated by JS -->
+      </div>
+    </main>
+
+    <!-- ════════════════════════════════════ -->
+    <!--  VIEW: STATS                         -->
+    <!-- ════════════════════════════════════ -->
+    <main id="view-stats" class="app-view hidden">
+      <div class="view-header">
+        <h2 class="page-title">ESTADÍSTICAS <span class="highlight">GLOBALES</span></h2>
+      </div>
+
+      <div class="stats-tabs">
+        <button class="stats-tab active" data-tab="scorers">⚽ Goleadores</button>
+        <button class="stats-tab" data-tab="teams">🏆 Selecciones</button>
+        <button class="stats-tab" data-tab="cards">🟨 Disciplina</button>
+      </div>
+
+      <div id="stats-scorers" class="stats-panel active">
+        <div id="scorers-table" class="stats-table"></div>
+      </div>
+      <div id="stats-teams" class="stats-panel hidden">
+        <div id="teams-table" class="stats-table"></div>
+      </div>
+      <div id="stats-cards" class="stats-panel hidden">
+        <div id="cards-table" class="stats-table"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!--  MATCH SIMULATION MODAL                    -->
+  <!-- ══════════════════════════════════════════ -->
+  <div id="modal-match" class="modal-fullscreen hidden">
+    <div class="match-modal-content">
+      <div class="match-modal-header">
+        <button id="btn-close-match" class="btn-close-match">✕ Cerrar</button>
+        <div class="match-round-label" id="match-round-label">Octavos de Final</div>
+      </div>
+
+      <div class="scoreboard">
+        <div class="scoreboard-team home">
+          <div class="sb-flag" id="sb-flag-home"></div>
+          <div class="sb-name" id="sb-name-home">—</div>
+        </div>
+        <div class="scoreboard-center">
+          <div class="sb-score" id="sb-score">
+            <span id="sb-score-home">0</span>
+            <span class="sb-sep">:</span>
+            <span id="sb-score-away">0</span>
+          </div>
+          <div class="sb-time" id="sb-time">0'</div>
+          <div class="sb-status" id="sb-status">En juego</div>
+        </div>
+        <div class="scoreboard-team away">
+          <div class="sb-flag" id="sb-flag-away"></div>
+          <div class="sb-name" id="sb-name-away">—</div>
+        </div>
+      </div>
+
+      <!-- Match Timeline -->
+      <div class="match-timeline">
+        <div id="match-events" class="match-events"></div>
+      </div>
+
+      <!-- Match Stats -->
+      <div id="match-stats-panel" class="match-stats-panel hidden">
+        <h3>Estadísticas del Partido</h3>
+        <div id="match-stats-content" class="match-stats-grid"></div>
+        <div class="match-motm">
+          <h4>🌟 Mejor Jugador</h4>
+          <div id="motm-player" class="motm-display"></div>
+        </div>
+        <button id="btn-match-done" class="btn-primary btn-glow">Continuar</button>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
