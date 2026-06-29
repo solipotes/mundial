@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="css/bracket.css" />
   <link rel="stylesheet" href="css/match.css" />
   <link rel="stylesheet" href="css/team.css" />
+  <link rel="stylesheet" href="css/multiplayer.css" />
 
   <!-- JavaScript -->
   <script type="module" src="js/app.js?v=3"></script>
@@ -251,6 +252,10 @@
           
           <button id="btn-home-new-historic" class="btn-primary btn-glow btn-large" style="width:100%; max-width:400px; font-size:1.2rem; background: linear-gradient(135deg, #FF6B00, #FF0000);">
             ⚽ Empezar Nuevo Mundial Histórico
+          </button>
+
+          <button id="btn-home-multiplayer" class="btn-primary btn-glow btn-large" style="width:100%; max-width:400px; font-size:1.2rem; background: linear-gradient(135deg, #7C3AED, #4F46E5);">
+            🌐 Multijugador (Beta)
           </button>
           
           <button id="btn-home-continue" class="btn-secondary btn-large hidden" style="width:100%; max-width:400px; font-size:1.2rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);">
@@ -506,6 +511,103 @@
         </div>
         <button id="btn-match-done" class="btn-primary btn-glow">Continuar</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!--  VIEW: MULTIPLAYER MENU                    -->
+  <!-- ══════════════════════════════════════════ -->
+  <div id="view-multiplayer" class="app-view hidden">
+    <div class="mp-container">
+      <div class="mp-header">
+        <span class="mp-header-icon">🌐</span>
+        <h1 class="mp-title">MULTIJUGADOR</h1>
+        <p class="mp-subtitle">Juega con amigos en el mismo Mundial en tiempo real</p>
+      </div>
+
+      <div class="mp-actions">
+        <button id="btn-mp-create" class="btn-mp-create">
+          <span>🏆</span> Crear Sala
+        </button>
+
+        <div>
+          <button id="btn-mp-show-join" class="btn-mp-join">
+            <span>🔑</span> Unirse con Código
+          </button>
+          <div id="mp-join-form" style="display:none; margin-top:10px;">
+            <div class="pin-input-container">
+              <input type="text" id="mp-pin-input" class="pin-input" maxlength="6" placeholder="CÓDIGO" autocomplete="off" />
+              <button id="btn-mp-join-go" class="btn-pin-go">→</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mp-my-rooms">
+        <div class="mp-section-label">Mis Salas</div>
+        <div id="mp-my-rooms-list">
+          <p style="color:var(--text-muted);font-size:0.85rem;">Cargando salas...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!--  VIEW: MULTIPLAYER LOBBY                   -->
+  <!-- ══════════════════════════════════════════ -->
+  <div id="view-multiplayer-lobby" class="app-view hidden">
+    <div class="lobby-container">
+
+      <!-- Back button -->
+      <button id="btn-lobby-back" style="background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:0.9rem;margin-bottom:16px;display:flex;align-items:center;gap:6px;">← Volver</button>
+
+      <!-- Room name -->
+      <h2 id="lobby-room-name" style="font-size:1.4rem;font-weight:800;margin-bottom:16px;"></h2>
+
+      <!-- PIN card -->
+      <div class="pin-card">
+        <div class="pin-label">🔑 Código de Sala</div>
+        <div class="pin-code" id="lobby-pin">------</div>
+        <div class="pin-share-btns">
+          <button id="btn-lobby-whatsapp" class="btn-whatsapp">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            Compartir por WhatsApp
+          </button>
+          <button id="btn-lobby-copy" class="btn-copy-pin">📋 Copiar código</button>
+        </div>
+      </div>
+
+      <!-- Countdown to start -->
+      <div class="lobby-countdown">
+        <div class="lobby-countdown-icon">⏳</div>
+        <div class="lobby-countdown-text">
+          <div class="lobby-countdown-title">El mundial empieza en</div>
+          <div class="lobby-countdown-time" id="lobby-timer">--:--:--</div>
+        </div>
+      </div>
+
+      <!-- Country selection -->
+      <button id="btn-lobby-choose-country" class="lobby-select-country-btn">
+        ⚽ Elegir mi Selección
+      </button>
+
+      <!-- Players list -->
+      <div class="lobby-players-header">
+        <div class="lobby-players-label">👥 Jugadores</div>
+        <div class="lobby-players-count" id="lobby-players-count">0 jugadores</div>
+      </div>
+      <div id="lobby-players-grid" class="lobby-players-grid"></div>
+
+      <!-- Start button (creator only) -->
+      <button id="btn-lobby-start" class="lobby-start-btn hidden" disabled>
+        🚀 Iniciar Mundial
+      </button>
+
+      <!-- Waiting message (non-creator) -->
+      <p id="lobby-waiting-msg" class="hidden" style="text-align:center;color:var(--text-secondary);font-size:0.9rem;">
+        Esperando a que el creador inicie el torneo...
+      </p>
+
     </div>
   </div>
 

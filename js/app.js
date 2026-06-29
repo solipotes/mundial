@@ -21,6 +21,16 @@ import { getTopScorers, getTopAssists, getMostCards, assignDefaultStarters } fro
 import { FORMATIONS, autoSelectStarters, enforceFormationLimits } from './formations.js';
 import { simulateRound, applyMatchResult, simulateMatch, generateNarrative } from './simulation.js';
 import {
+  initMultiplayerUI,
+  openLobby,
+  checkUrlForJoinPin,
+  getMpCurrentPin,
+  renderMpNextRoundBanner,
+  renderMpPlayersStrip,
+  trySimulateMpRound,
+  advanceMpPhase,
+} from './multiplayer-ui.js';
+import {
   showView, showToast, showLoading, hideLoading,
   renderCountryGrid, renderSquadList, renderMatchCard,
   renderBracket, renderFormation, renderJersey,
@@ -37,12 +47,16 @@ import {
 
 // ─── App State ────────────────────────────────────────────
 let appState = {
-  user:       null,
-  myTeam:     null,    // selected country + custom kit + players
-  tournament: null,    // full tournament state
-  currentKit: 'home',  // 'home' | 'away'
-  editingPlayer: null, // player being edited in modal
-  tournamentType: '2026', // '2026' | 'historic'
+  user:           null,
+  myTeam:         null,    // selected country + custom kit + players
+  tournament:     null,    // full tournament state
+  currentKit:     'home',  // 'home' | 'away'
+  editingPlayer:  null,    // player being edited in modal
+  tournamentType: '2026',  // '2026' | 'historic'
+  isMultiplayer:  false,   // true when playing a shared tournament
+  mpPin:          null,    // current multiplayer room PIN
+  mpUnsubscribe:  null,    // Firestore onSnapshot cleanup fn
+  mpMyCountryId:  null,    // this player's country in the MP tournament
 };
 
 // Helper to get active countries
@@ -65,6 +79,40 @@ async function boot() {
   bindMatchEvents();
   bindTeamEvents();
   bindStatsEvents();
+
+  // Listen for mp-tournament-ready (dispatched when lobby goes active)
+  window.addEventListener('mp-tournament-ready', (e) => {
+    const { data, state, myCountryId, pin } = e.detail;
+    appState.isMultiplayer  = true;
+    appState.mpPin          = pin;
+    appState.mpMyCountryId  = myCountryId;
+    appState.tournament     = state;
+    appState.myTeam         = state.teamRatings?.[myCountryId] || null;
+    enterAppShell();
+  });
+
+  // Listen for mp-state-updated (real-time Firestore push while in dashboard)
+  window.addEventListener('mp-state-updated', (e) => {
+    if (!appState.isMultiplayer) return;
+    const { state } = e.detail;
+    state.myTeamId = appState.mpMyCountryId;
+    appState.tournament = state;
+    // Only re-render if dashboard is visible
+    const dashView = document.getElementById('view-dashboard');
+    if (dashView && !dashView.classList.contains('hidden')) {
+      refreshDashboard();
+      showToast('🔄 Resultados actualizados', 'info');
+    }
+  });
+
+  // Check URL for auto-join (?join=XXXX)
+  const joinPin = checkUrlForJoinPin();
+  if (joinPin) {
+    // Clean URL without reloading
+    window.history.replaceState({}, '', window.location.pathname);
+    // Store pin for after auth
+    window._pendingJoinPin = joinPin;
+  }
 
   // Check if Firebase is configured
   const isFirebaseConfigured = checkFirebaseConfig();
@@ -179,8 +227,11 @@ async function handleAuthChange(user) {
     avatarImg.alt = appState.user.displayName;
   }
 
+  // Initialize multiplayer UI module
+  initMultiplayerUI(appState.user);
+
   // Load saved state
-  const savedTeam       = await loadLocalMyTeam();
+  const savedTeam        = await loadLocalMyTeam();
   const activeTournament = await loadLocalTournament();
   if (activeTournament) {
     appState.tournament = activeTournament;
@@ -189,9 +240,19 @@ async function handleAuthChange(user) {
     appState.tournamentType = loadedType;
   }
 
+  // Check for pending join pin from URL
+  if (window._pendingJoinPin) {
+    const pin = window._pendingJoinPin;
+    window._pendingJoinPin = null;
+    hideLoading();
+    showView('multiplayer-lobby');
+    openLobby(pin);
+    return;
+  }
+
   if (appState.tournament && appState.tournament.myTeamId) {
     // Resume tournament
-    appState.myTeam     = savedTeam;
+    appState.myTeam = savedTeam;
     hideLoading();
     showHomeView(true);
   } else if (savedTeam && savedTeam.id) {
@@ -658,6 +719,19 @@ function refreshDashboard() {
   // Render history section
 
 
+  // ── Multiplayer: show timer + player strip ────────────────
+  if (appState.isMultiplayer) {
+    const pin = appState.mpPin;
+    const mpData = window._mpCurrentData; // kept updated by onSnapshot
+    const nextRoundMs = mpData?.nextRoundAt?.toMillis?.() || 0;
+    renderMpNextRoundBanner(nextRoundMs);
+    renderMpPlayersStrip(
+      state.humanPlayers || [],
+      state.teamRatings,
+      appState.mpMyCountryId
+    );
+  }
+
   // Manage visibility
   const simulateSection = document.getElementById('simulate-section');
   const resultsSection  = document.getElementById('round-results');
@@ -690,41 +764,56 @@ function bindMatchEvents() {
     showLoading('Simulando partidos...');
     await new Promise(r => setTimeout(r, 800));
 
-    const newState = simulateRound(appState.tournament);
-    
-    // Determine status correctly
-    if (newState.phase === 'groups') {
-      if (isMatchdayDone(newState)) {
-         newState.status = isGroupStageDone(newState) ? 'phase_done' : 'matchday_done';
-         if (newState.groupMatchday === 3) newState.status = 'phase_done';
+    let newState;
+
+    // ── Multiplayer: simulate via Firestore ──────────────────
+    if (appState.isMultiplayer && appState.mpPin) {
+      newState = await trySimulateMpRound(appState.mpPin);
+      if (!newState) {
+        hideLoading();
+        showToast('Aún no es hora de simular (faltan horas)', 'info');
+        return;
       }
+      appState.tournament = newState;
+      // myTeamId in multiplayer is the humanPlayer's country
+      appState.tournament.myTeamId = appState.mpMyCountryId;
     } else {
-      if (isKnockoutPhaseDone(newState)) {
-        if (newState.phase === 'final') {
-          // Final + 3rd place both done → tournament over, set champion now
-          const finalMatch = newState.knockoutRounds.final?.[0];
-          const thirdMatch = newState.thirdPlaceMatch;
-          newState.champion = finalMatch?.winnerId || null;
-          newState.thirdPlaceWinner = thirdMatch?.winnerId || null;
-          newState.third = thirdMatch?.winnerId || null;
-          if (finalMatch?.loserId) newState.eliminatedTeams.push(finalMatch.loserId);
-          newState.status = 'completed';
-        } else {
-          newState.status = 'phase_done';
+      // ── Solo: simulate locally ────────────────────────────
+      newState = simulateRound(appState.tournament);
+
+      if (newState.phase === 'groups') {
+        if (isMatchdayDone(newState)) {
+          newState.status = isGroupStageDone(newState) ? 'phase_done' : 'matchday_done';
+          if (newState.groupMatchday === 3) newState.status = 'phase_done';
+        }
+      } else {
+        if (isKnockoutPhaseDone(newState)) {
+          if (newState.phase === 'final') {
+            const finalMatch = newState.knockoutRounds.final?.[0];
+            const thirdMatch = newState.thirdPlaceMatch;
+            newState.champion = finalMatch?.winnerId || null;
+            newState.thirdPlaceWinner = thirdMatch?.winnerId || null;
+            newState.third = thirdMatch?.winnerId || null;
+            if (finalMatch?.loserId) newState.eliminatedTeams.push(finalMatch.loserId);
+            newState.status = 'completed';
+          } else {
+            newState.status = 'phase_done';
+          }
         }
       }
+
+      appState.tournament = newState;
+      appState.viewingPhaseId = null;
+      saveLocalTournament(newState);
     }
 
-    appState.tournament = newState;
     appState.viewingPhaseId = null;
-    saveLocalTournament(newState);
-
     hideLoading();
     refreshDashboard();
     showToast('¡Ronda completada!', 'success');
   });
 
-  document.getElementById('btn-next-round')?.addEventListener('click', () => {
+  document.getElementById('btn-next-round')?.addEventListener('click', async () => {
     if (!appState.tournament) return;
 
     // If tournament already completed (browsing past), jump straight to podium
@@ -734,19 +823,29 @@ function bindMatchEvents() {
       return;
     }
 
-    const newState = advanceTournament(appState.tournament);
-    appState.tournament = newState;
+    let newState;
+    if (appState.isMultiplayer && appState.mpPin) {
+      showLoading('Avanzando fase...');
+      newState = await advanceMpPhase(appState.mpPin);
+      hideLoading();
+      if (!newState) { showToast('Error al avanzar fase', 'error'); return; }
+      appState.tournament = newState;
+      appState.tournament.myTeamId = appState.mpMyCountryId;
+    } else {
+      newState = advanceTournament(appState.tournament);
+      appState.tournament = newState;
+      saveLocalTournament(newState);
+    }
+
     appState.viewingPhaseId = null;
-    saveLocalTournament(newState);
-    
-    // Check if tournament just finished
+
     if (newState.status === 'completed') {
-      saveLocalTournamentHistory(newState);
+      if (!appState.isMultiplayer) saveLocalTournamentHistory(newState);
       showView('dashboard');
       showChampionScreen(newState);
       return;
     }
-    
+
     refreshDashboard();
   });
 
@@ -1256,7 +1355,30 @@ async function renderHallOfFame() {
       return;
     }
     
-    history.sort((a, b) => new Date(b.completedAt || 0) - new Date(a.completedAt || 0)).forEach(tourn => {
+    const HOF_PAGE_SIZE = 12;
+    appState.hofPage = appState.hofPage || 0;
+
+    history.sort((a, b) => {
+      const getTime = (t) => {
+        if (t.completedAt) return new Date(t.completedAt).getTime();
+        if (t.id) {
+          const parts = t.id.split('_');
+          if (parts.length > 1) {
+            const ts = parseInt(parts[1]);
+            if (!isNaN(ts)) return ts;
+          }
+        }
+        return 0;
+      };
+      return getTime(b) - getTime(a);
+    });
+
+    const totalPages = Math.ceil(history.length / HOF_PAGE_SIZE);
+    if (appState.hofPage >= totalPages) appState.hofPage = Math.max(0, totalPages - 1);
+
+    const pageData = history.slice(appState.hofPage * HOF_PAGE_SIZE, (appState.hofPage + 1) * HOF_PAGE_SIZE);
+
+    pageData.forEach(tourn => {
       if (!tourn || !tourn.teamRatings) return; // Ignore malformed data
 
       const card = document.createElement('div');
@@ -1434,6 +1556,35 @@ async function renderHallOfFame() {
       
       grid.appendChild(card);
     });
+
+    if (totalPages > 1) {
+      const pag = document.createElement('div');
+      pag.style.cssText = 'grid-column:1/-1; display:flex; justify-content:center; gap:10px; margin-top:20px;';
+      
+      const btnPrev = document.createElement('button');
+      btnPrev.textContent = '◀ Anterior';
+      btnPrev.className = 'btn-secondary';
+      btnPrev.style.cssText = 'padding:8px 16px; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.1); color:white; border:none;';
+      if (appState.hofPage === 0) { btnPrev.disabled = true; btnPrev.style.opacity = '0.5'; btnPrev.style.cursor = 'not-allowed'; }
+      btnPrev.onclick = () => { appState.hofPage--; renderHallOfFame(); };
+      
+      const span = document.createElement('span');
+      span.textContent = `Página ${appState.hofPage + 1} de ${totalPages}`;
+      span.style.cssText = 'display:flex; align-items:center; font-weight:bold; color:var(--text-muted);';
+
+      const btnNext = document.createElement('button');
+      btnNext.textContent = 'Siguiente ▶';
+      btnNext.className = 'btn-secondary';
+      btnNext.style.cssText = 'padding:8px 16px; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.1); color:white; border:none;';
+      if (appState.hofPage === totalPages - 1) { btnNext.disabled = true; btnNext.style.opacity = '0.5'; btnNext.style.cursor = 'not-allowed'; }
+      btnNext.onclick = () => { appState.hofPage++; renderHallOfFame(); };
+
+      pag.appendChild(btnPrev);
+      pag.appendChild(span);
+      pag.appendChild(btnNext);
+      grid.appendChild(pag);
+    }
+
   } catch (err) {
     console.error("Hall of Fame rendering error:", err);
     grid.innerHTML = `<p style="color:var(--danger);text-align:center;grid-column:1/-1">Error cargando el salón de la fama: ${err.message}</p>`;

@@ -1,12 +1,42 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // ─── Usuarios ────────────────────────────────────────────────
+    // Cada usuario solo puede leer y escribir sus propios datos.
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
-      
+
+      // Historial de torneos individuales (guardados por usuario)
       match /tournaments/{tournId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
+    }
+
+    // ─── Torneos Multijugador ────────────────────────────────────
+    // Un torneo multijugador es identificado por su PIN.
+    match /multiplayerTournaments/{pin} {
+
+      // Cualquier usuario autenticado puede leer el torneo
+      // (necesario para unirse vía PIN sin ser miembro todavía).
+      allow read: if request.auth != null;
+
+      // Crear una sala nueva: solo usuarios autenticados.
+      allow create: if request.auth != null
+        && request.resource.data.createdBy == request.auth.uid;
+
+      // Actualizar un torneo:
+      //   - Solo si eres miembro (apareces en players.{uid})
+      //   - O si eres el creador
+      allow update: if request.auth != null
+        && (
+          request.auth.uid in resource.data.players
+          || request.auth.uid == resource.data.createdBy
+        );
+
+      // Borrar: solo el creador puede eliminar la sala
+      allow delete: if request.auth != null
+        && request.auth.uid == resource.data.createdBy;
     }
   }
 }
