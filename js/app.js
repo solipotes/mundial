@@ -156,6 +156,10 @@ function checkFirebaseConfig() {
 
 // ─── Auth Events ──────────────────────────────────────────
 function bindAuthEvents() {
+  document.getElementById('btn-start-now')?.addEventListener('click', () => {
+    showView('auth');
+  });
+
   document.getElementById('btn-google-login')?.addEventListener('click', async () => {
     try {
       showLoading('Iniciando sesión...');
@@ -217,7 +221,7 @@ function bindAuthEvents() {
 async function handleAuthChange(user) {
   if (!user) {
     hideLoading();
-    showView('auth');
+    showView('landing');
     return;
   }
 
